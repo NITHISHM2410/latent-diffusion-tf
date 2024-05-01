@@ -1,0 +1,33 @@
+model_dir: fs_modules.vqgan
+model_name: VQGAN
+params:
+  gen:
+    ch_list:
+      - 128
+      - 256
+      - 512
+    c_in: 3
+    c_out: 3
+    img_size: 256
+    attn_res:
+      -
+    zc: 3
+    latent_vectors: 8192
+    latent_dim: 3
+    vq_beta: 0.25
+
+  disc:
+    disc_weight: 0.2
+    n_layers: 3
+    c_in: 3
+    hw: 256
+
+  trainer:
+    codebook_weight: 1
+    disc_factor: 1.0
+    disc_start: 100000
+    lpips_weight: 1.0
+
+
+
+

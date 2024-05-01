@@ -1,0 +1,36 @@
+model_dir: diffusion.models
+model_name: ClassCondUNet
+params:
+  base:
+    c_in: 3
+    c_out: 3
+    ch_list:
+    - 224
+    - 448
+    - 672
+    - 896
+    norm_g: 32
+    attn_res:
+    - 32
+    - 16
+    - 8
+    heads: 1
+    cph: 32
+    sp_attn_depth: 1
+    resamp_with_conv: true
+    num_res_blocks: 2
+    img_res: 64
+    dropout: 0.0
+    time_steps: 1000
+    beta_start: 0.0015
+    beta_end: 0.0195
+    cond_weight: 3
+    img_cond: false
+    text_cond: false
+    class_cond: true
+
+  num_classes: 5
+
+
+
+
