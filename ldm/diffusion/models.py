@@ -22,7 +22,11 @@ class ClassCondUNet(DiffusionUNet):
 
         :param num_classes: No of classes.
 
-        Conditional input 'class_cond' should be a tensor with shape (B, 1), where B is the batch size and 2nd dim is the label value.
+        Conditional input :-
+            'class_cond': should be a tensor with shape (B, 1), where B is the batch size and 2nd dim is the label value.
+
+         Requires a param 'cond_weight' in 'conditions' dict.
+            'cond_weight': interpolation weight from uncond to cond sampling.
         """
         super(ClassCondUNet, self).__init__(**kwargs['base'])
         self.num_classes = num_classes

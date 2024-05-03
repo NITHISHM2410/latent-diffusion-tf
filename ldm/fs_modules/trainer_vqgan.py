@@ -126,7 +126,7 @@ class Trainer:
             max_to_keep=1
         )
 
-    def restore_checkpoint(self, save_dir, ckpt_name, cus_vars):
+    def restore_checkpoint(self, save_dir, ckpt_name, cus_vars=None):
         """
         Points the checkpoint manager to a checkpoint in the specified directory.
 

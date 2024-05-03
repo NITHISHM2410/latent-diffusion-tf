@@ -9,7 +9,7 @@ class Trainer:
     def __init__(self, model_config, lr=2e-5, ema_iterations_start=5000, loss_type='l2', no_of=64,
                  freq=3, sample_ema_only=True, is_logging=False, is_img_logging=True, device=None,
                  train_logdir="logs/train_logs/", val_logdir="logs/val_logs/", img_logdir="logs/img_logs/",
-                 save_dir=None, checkpoint_name=None):
+                 save_dir='save_dir_ldm', checkpoint_name="ldm_ckpt"):
 
         """
 
@@ -78,7 +78,7 @@ class Trainer:
         self.cur_trackable = None
         self.save_dir = save_dir
         self.checkpoint_name = checkpoint_name
-        self.set_checkpoint(self.save_dir, self.checkpoint_name, None, True)
+        self.set_checkpoint(self.save_dir, self.checkpoint_name, None)
 
         # Loss trackers
         self.loss_tracker = tf.keras.metrics.Mean()
@@ -118,15 +118,13 @@ class Trainer:
         variables.update(additional)
         return variables
 
-    def set_checkpoint(self, save_dir, ckpt_name, cus_vars, replace):
+    def set_checkpoint(self, save_dir, ckpt_name, cus_vars):
         """
         Points the checkpoint manager to a checkpoint in the specified directory.
 
         :param save_dir: Directory of the checkpoint to be restored or save.
         :param ckpt_name: Name of the checkpoint to be restored or save.
         :param cus_vars: Custom objects to be added to checkpoint instead of default objects.
-        :param replace: boolean, when True, custom vars replace default vars. when false, custom vars are appended to
-         default vars.
 
         If no checkpoint is available in 'save_dir' named 'ckpt_name' then one will be created during training.
         If a checkpoint is available in the above-mentioned location, then it will be tracked. No new checkpoint will be created.
@@ -139,10 +137,7 @@ class Trainer:
         if cus_vars is None:
             self.cur_trackable = self.get_default_trackable()
         else:
-            if replace:
-                self.cur_trackable = cus_vars
-            else:
-                self.cur_trackable = self.get_default_trackable(cus_vars)
+            self.cur_trackable = cus_vars
 
         self.checkpoint = tf.train.Checkpoint(**self.cur_trackable)
         self.save_manager = tf.train.CheckpointManager(
@@ -152,19 +147,17 @@ class Trainer:
             max_to_keep=50
         )
 
-    def restore_checkpoint(self, checkpoint_dir, checkpoint_name, custom_vars, replace):
+    def restore_checkpoint(self, checkpoint_dir, checkpoint_name, custom_vars=None):
         """
         Resumes training from checkpoint.
 
         :param checkpoint_dir: Directory of existing checkpoint.
         :param checkpoint_name: Name of the existing checkpoint in 'checkpoint_dir'.
         :param custom_vars: Custom objects to be added to checkpoint instead of default objects.
-        :param replace: boolean, when True, custom vars replace default vars. when false, custom vars are appended to
-         default vars.
 
 
         """
-        self.set_checkpoint(checkpoint_dir, checkpoint_name, custom_vars, replace)
+        self.set_checkpoint(checkpoint_dir, checkpoint_name, custom_vars)
         ckpt_name = self.checkpoint_name + '-0'
         self.checkpoint.restore(os.path.join(self.save_dir, ckpt_name))
         if self.is_logging:

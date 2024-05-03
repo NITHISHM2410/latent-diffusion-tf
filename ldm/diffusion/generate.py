@@ -43,7 +43,7 @@ class GenerateImages:
             ckpt = tf.train.Checkpoint(ema_model=self.model, latent_scale=self.latent_scale, fs_model=self.fs_model)
         else:
             ckpt = tf.train.Checkpoint(ema_model=self.model)
-        ckpt.restore(ckpt_path)
+        ckpt.restore(ckpt_path).expect_partial()
         print("Checkpoint loaded.")
 
     @tf.function
