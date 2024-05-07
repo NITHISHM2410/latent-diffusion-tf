@@ -29,7 +29,7 @@ params:
     text_cond: false
     class_cond: true
 
-  num_classes: 5
+  num_classes: 16
 
 
 

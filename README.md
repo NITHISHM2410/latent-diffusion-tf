@@ -20,13 +20,21 @@ The forward noising and gradual denoising happens in latent space of images whic
 
 ### Unconditional generation
 
+### CELEB-A DATASET
 <img src='results/celeb_uncond.png'>
+<br>
+
+### LHQ-DATASET
 <img src='results/lhq_uncond.png'>
+<br>
+
+### FLOWERS-DATASET
+<img src='results\flower_ex.png'>
 
 
 ## Target
 * [x]  Unconditional modelling. <br>
-* [ ] Class conditioning modelling. <br>
+* [x] Class conditioning modelling. <br>
 * [ ] Text conditioning modelling. <br>
 * [ ] Generative fill applications using DM. Will be uploaded [here](https://github.com/NITHISHM2410/diffusion-model-tf-generativefill) <br>
 
@@ -84,6 +92,7 @@ generator.sample() # check params in docstring.
 - [VQGAN in PyTorch](https://github.com/CompVis/taming-transformers)
 - [LHQ Dataset](https://universome.github.io/alis)
 - [CelebA Dataset](https://www.kaggle.com/datasets/badasstechie/celebahq-resized-256x256)
+- [Flowers Dataset](https://www.kaggle.com/datasets/l3llff/flowers)
 
 
 
