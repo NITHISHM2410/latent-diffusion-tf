@@ -101,10 +101,10 @@ class VQGAN(tf.keras.Model):
         self.latent_vectors = latent_vectors
 
         self.encoder = Encoder(ch_list=ch_list, attn_res=attn_res,
-                               img_res=img_size, c_in=c_in, c_out=zc, heads=1)
+                               img_res=img_size, c_in=c_in, c_out=zc)
         self.decoder = Decoder(ch_list=ch_list, attn_res=attn_res,
                                img_res=img_size // (2 ** (len(ch_list) - 1)),
-                               c_in=zc, c_out=c_out, heads=1)
+                               c_in=zc, c_out=c_out)
 
         self.q_conv = tf.keras.layers.Conv2D(filters=latent_dim, kernel_size=1)
         self.post_q_conv = tf.keras.layers.Conv2D(filters=zc, kernel_size=1)

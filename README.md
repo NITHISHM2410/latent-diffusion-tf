@@ -28,14 +28,30 @@ The forward noising and gradual denoising happens in latent space of images whic
 <img src='results/lhq_uncond.png'>
 <br>
 
+
+### Class conditional generation
+
 ### FLOWERS-DATASET
 <img src='results\flower_ex.png'>
+<br>
 
+
+### Text conditional generation
+
+### COCO-DATASET 
+* Perfect view of a city.
+* Landscape of nature with lots of trees.
+* View of snow mountains.
+* A room in a house.
+* A plate of tasty food.
+* A long empty road.
+<br><br>
+<img src='results\t2i_disp.png'>
 
 ## Target
 * [x]  Unconditional modelling. <br>
 * [x] Class conditioning modelling. <br>
-* [ ] Text conditioning modelling. <br>
+* [x] Text conditioning modelling. <br>
 * [ ] Generative fill applications using DM. Will be uploaded [here](https://github.com/NITHISHM2410/diffusion-model-tf-generativefill) <br>
 
 

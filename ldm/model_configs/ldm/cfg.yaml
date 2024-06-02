@@ -14,9 +14,8 @@ params:
     - 32
     - 16
     - 8
-    heads: 1
-    cph: 32
     sp_attn_depth: 1
+    trans_dim: 224
     resamp_with_conv: true
     num_res_blocks: 2
     img_res: 64

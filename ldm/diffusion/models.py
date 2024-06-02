@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow_hub as hub
 from ldm.diffusion.diffusion_tf import DiffusionUNet
 
 
@@ -12,7 +13,8 @@ class UnCondUNet(DiffusionUNet):
         self.build_model()
 
     def apply_conditioning(self, conditions):
-        conditions['img_org'] = conditions['img_cond'] = conditions['text_cond'] = conditions['class_cond'] = conditions['cond_weight'] = None
+        conditions['img_org'] = conditions['img_cond'] = conditions['text_cond'] = conditions['class_cond'] = \
+        conditions['cond_weight'] = None
         return conditions
 
 
@@ -44,7 +46,8 @@ class ClassCondUNet(DiffusionUNet):
 
     def apply_conditioning(self, conditions):
         conditions['img_org'] = conditions['img_cond'] = conditions['text_cond'] = None
-        assert 'class_cond' in conditions and conditions['class_cond'] is not None, "Provide class_cond for class conditioning model."
+        assert 'class_cond' in conditions and conditions[
+            'class_cond'] is not None, "Provide class_cond for class conditioning model."
         conditions['cond_weight'] = tf.constant(conditions.get('cond_weight', self.cond_weight), dtype=tf.float32)
         return conditions
 
@@ -102,9 +105,11 @@ class UnMaskUNet(DiffusionUNet):
 
         if mask_boxes is None:
             mh = tf.random.uniform((B, 1, 1, 1), 0, H - minn_h_box, tf.int32)
-            mhx = tf.clip_by_value(tf.random.uniform((B, 1, 1, 1), tf.reduce_min(mh), H, tf.int32), mh+minn_h_box, mh+maxx_h_box)
+            mhx = tf.clip_by_value(tf.random.uniform((B, 1, 1, 1), tf.reduce_min(mh), H, tf.int32), mh + minn_h_box,
+                                   mh + maxx_h_box)
             mw = tf.random.uniform((B, 1, 1, 1), 0, W - minn_w_box, tf.int32)
-            mwx = tf.clip_by_value(tf.random.uniform((B, 1, 1, 1), tf.reduce_min(mw), W, tf.int32), mw+minn_w_box, mw+maxx_w_box)
+            mwx = tf.clip_by_value(tf.random.uniform((B, 1, 1, 1), tf.reduce_min(mw), W, tf.int32), mw + minn_w_box,
+                                   mw + maxx_w_box)
         else:
             mh, mw, mhx, mwx = tf.split(mask_boxes, 4, 1)
             mh, mw, mhx, mwx = mh[:, :, None, None], mw[:, :, None, None], mhx[:, :, None, None], mwx[:, :, None, None]
@@ -117,7 +122,8 @@ class UnMaskUNet(DiffusionUNet):
 
     def apply_conditioning(self, conditions):
         conditions['text_cond'] = conditions['class_cond'] = conditions['cond_weight'] = None
-        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for class conditioning model."
+        assert 'img_cond' in conditions and conditions[
+            'img_cond'] is not None, "Provide img_cond for class conditioning model."
 
         if isinstance(conditions['img_cond'], dict):
             conditions['img_org'] = conditions['img_cond']['image']
@@ -129,5 +135,41 @@ class UnMaskUNet(DiffusionUNet):
         return conditions
 
 
+class TextCondUNet(DiffusionUNet):
+    def __init__(self, model_path, **kwargs):
+        """
 
+        :param model_path: path of pretrained text encoder model.
 
+        Conditional input :-
+            'text_cond':  tokenized text 'input_word_ids' using bert tokenizer. output shape of bert tokenizer 'input_word_ids' = (BS, 128)
+
+             Requires a param 'cond_weight' in 'conditions' dict.
+                'cond_weight': interpolation weight from uncond to cond sampling.
+        """
+        super(TextCondUNet, self).__init__(**kwargs['base'])
+        self.text_seq_len = 128
+
+        self.bert_encoder = hub.KerasLayer(model_path)
+        self.bert_encoder.trainable = False
+
+        self.build_model(text_seq_dim=self.text_seq_len)
+
+    def encode_inputs(self, inputs):
+        inputs = super().encode_inputs(inputs.copy())
+        tokens = tf.cast(inputs['text_cond'], tf.int32)
+
+        inputs['text_cond'] = {
+            'input_mask': tf.cast(tf.cast(tokens, tf.bool), tf.int32),
+            'input_type_ids': tf.zeros_like(tokens),
+            'input_word_ids': tokens
+        }
+        inputs['text_cond'] = self.bert_encoder(inputs['text_cond'])['sequence_output']
+        return inputs
+
+    def apply_conditioning(self, conditions):
+        conditions['img_org'] = conditions['img_cond'] = conditions['class_cond'] = None
+        assert 'text_cond' in conditions and conditions[
+            'text_cond'] is not None, "Provide text_cond for text conditioning model."
+        conditions['cond_weight'] = tf.constant(conditions.get('cond_weight', self.cond_weight), dtype=tf.float32)
+        return conditions

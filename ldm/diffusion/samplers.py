@@ -34,8 +34,7 @@ class DDPMSampler:
                 predicted_noise_cond = model(inputs, training=False)
 
                 inputs['class_cond'] = tf.fill(tf.shape(inputs['class_cond']), value=0) if model.class_cond else None
-                inputs['text_cond'] = tf.fill(tf.shape(inputs['text_cond']), value=0.0) if model.text_cond else None
-
+                inputs['text_cond'] = tf.repeat(tf.constant([101, 102] + [0]*(model.text_seq_len-2))[None, :], bs, axis=0) if model.text_cond else None
                 predicted_noise_uncond = model(inputs, training=False)
                 predicted_noise = predicted_noise_uncond + cond_weight * (predicted_noise_cond - predicted_noise_uncond)
 

@@ -1,32 +1,35 @@
 model_dir: diffusion.models
-model_name: UnCondUNet
+model_name: TextCondUNet
 params:
   base:
     c_in: 3
     c_out: 3
     ch_list:
-    - 224
-    - 448
-    - 672
-    - 896
+    - 320
+    - 640
+    - 1280
+    - 1280
     norm_g: 32
     attn_res:
     - 32
     - 16
     - 8
     sp_attn_depth: 1
-    trans_dim: 224
+    trans_dim: 320
     resamp_with_conv: true
     num_res_blocks: 2
     img_res: 64
     dropout: 0.0
     time_steps: 1000
-    beta_start: 0.0015
-    beta_end: 0.0195
+    beta_start: 0.00085
+    beta_end: 0.012
     cond_weight: 3
     img_cond: false
-    text_cond: false
+    text_cond: true
     class_cond: false
+
+
+  model_path: "/kaggle/input/bert/tensorflow2/bert-en-uncased-l-10-h-128-a-2/2"
 
 
 

@@ -249,7 +249,7 @@ class MHAAttentionBlock(tf.keras.layers.Layer):
 
 class Encoder(tf.keras.Model):
     def __init__(self, c_in=3, c_out=512, ch_list=(128, 128, 256, 256, 512, 512), attn_res=(16,), norm_g=32,
-                 heads=1, cph=32, resamp_with_conv=True, num_res_blocks=2, img_res=256, dropout=0):
+                 resamp_with_conv=True, num_res_blocks=2, img_res=256, dropout=0):
         """
         An Image encoder.
 
@@ -258,8 +258,6 @@ class Encoder(tf.keras.Model):
         :param ch_list: list of channels to be used across down & up sampling.
         :param attn_res: list of resolution for which attention mechanism is to be implemented.
         :param norm_g: number of groups for group norm.
-        :param heads: number of attention heads.
-        :param cph: channels per heads, used when 'heads' is set to -1 (adaptive no of heads).
         :param resamp_with_conv: boolean value whether to use conv layer during up and down sampling.
         :param num_res_blocks: number of resnet blocks per channel in 'ch_list'.
         :param img_res: input image resolution.
@@ -322,7 +320,7 @@ class Encoder(tf.keras.Model):
 
 class Decoder(tf.keras.Model):
     def __init__(self, c_in=512, c_out=3, ch_list=(128, 128, 256, 256, 512, 512), attn_res=(16,), norm_g=32,
-                 heads=1, cph=32, resamp_with_conv=True, num_res_blocks=2, img_res=256, dropout=0):
+                 resamp_with_conv=True, num_res_blocks=2, img_res=256, dropout=0):
         """
         An Image Decoder.
 
@@ -331,8 +329,6 @@ class Decoder(tf.keras.Model):
         :param ch_list: list of channels to be used across down & up sampling.
         :param attn_res: list of resolution for which attention mechanism is to be implemented.
         :param norm_g: number of groups for group norm.
-        :param heads: number of attention heads.
-        :param cph: channels per heads, used when 'heads' is set to -1 (adaptive no of heads).
         :param resamp_with_conv: boolean value whether to use conv layer during up and down sampling.
         :param num_res_blocks: number of resnet blocks per channel in 'ch_list'.
         :param img_res: input image resolution.
@@ -396,10 +392,9 @@ class Decoder(tf.keras.Model):
 
 
 class DiffusionUNet(tf.keras.Model):
-    def __init__(self, c_in=3, c_out=3, ch_list=(128, 256, 256, 256), norm_g=32, attn_res=(16,), heads=1, cph=32,
-                 sp_attn_depth=1, resamp_with_conv=True, num_res_blocks=2, img_res=64, dropout=0,
-                 img_cond=False, text_cond=False, class_cond=False, time_steps=1000, beta_start=1e-4, beta_end=0.02,
-                 cond_weight=3,
+    def __init__(self, c_in=3, c_out=3, ch_list=(128, 256, 256, 256), norm_g=32, attn_res=(16,),  sp_attn_depth=1,
+                 trans_dim=128, resamp_with_conv=True, num_res_blocks=2, img_res=64, dropout=0, img_cond=False, text_cond=False,
+                 class_cond=False, time_steps=1000, beta_start=1e-4, beta_end=0.02, cond_weight=3,
                  ):
         """
         An UNet model down samples and up samples and allows skip connections across both the up and down sampling.
@@ -410,9 +405,8 @@ class DiffusionUNet(tf.keras.Model):
         :param ch_list: list of channels to be used across down & up sampling.
         :param norm_g: number of groups for group norm.
         :param attn_res: list of resolution for which attention mechanism is to be implemented.
-        :param heads: number of attention heads.
-        :param cph: channels per heads, used when 'heads' is set to -1 (adaptive no of heads).
         :param sp_attn_depth: spatial attention transformer depth.
+        :param trans_dim: spatial attention transformer width.
         :param resamp_with_conv: boolean value whether to use conv layer during up and down sampling.
         :param num_res_blocks: number of resnet blocks per channel in 'ch_list'.
         :param img_res: input image resolution.
@@ -456,10 +450,9 @@ class DiffusionUNet(tf.keras.Model):
                 ResAttnBlock.add(ResBlock(block_in, block_out, dropout, self.ch_list[0]*4, norm_g, img_cond))
                 block_in = block_out
                 if cur_res in attn_res:
-                    hds, hd_dim = block_in // cph if heads == -1 else heads, block_in // heads if heads != -1 else cph
                     ResAttnBlock.add(
                         MHAAttentionBlock(block_in, norm_g) if not text_cond else
-                        SpatialTransformer(block_in, hds, hd_dim, sp_attn_depth)
+                        SpatialTransformer(block_in, trans_dim, sp_attn_depth)
                     )
 
                 self.down_layers.append(ResAttnBlock)
@@ -473,9 +466,8 @@ class DiffusionUNet(tf.keras.Model):
         self.mid_layers = []
         self.mid_layers.append(ResBlock(ch_list[-1], ch_list[-1], dropout, self.ch_list[0] * 4, norm_g, img_cond))
 
-        hds, hd_dim = ch_list[-1] // cph if heads == -1 else heads, ch_list[-1] // heads if heads != -1 else cph
         self.mid_layers.append(MHAAttentionBlock(ch_list[-1], norm_g) if not text_cond else
-                               SpatialTransformer(ch_list[-1], hds, hd_dim, sp_attn_depth))
+                               SpatialTransformer(ch_list[-1], trans_dim, sp_attn_depth))
 
         self.mid_layers.append(ResBlock(ch_list[-1], ch_list[-1], dropout, self.ch_list[0] * 4, norm_g, img_cond))
 
@@ -491,9 +483,8 @@ class DiffusionUNet(tf.keras.Model):
                 ResAttnBlock.add(ResBlock(skip_ch, block_out, dropout, self.ch_list[0] * 4, norm_g, img_cond))
                 block_in = block_out
                 if cur_res in attn_res:
-                    hds, hd_dim = block_in // cph if heads == -1 else heads, block_in // heads if heads != -1 else cph
                     ResAttnBlock.add(MHAAttentionBlock(block_in, norm_g) if not text_cond else
-                                     SpatialTransformer(block_in, hds, hd_dim, sp_attn_depth))
+                                     SpatialTransformer(block_in, trans_dim, sp_attn_depth))
                 self.up_layers.append(ResAttnBlock)
             if level != 0:
                 self.up_layers.append(UpSample(ch_list[level], resamp_with_conv))
@@ -512,13 +503,13 @@ class DiffusionUNet(tf.keras.Model):
         self.forward_diff = ForwardDiffusion(self.time_steps, beta_start=beta_start, beta_end=beta_end)
         self.alphas, self.betas, self.alpha_hats = self.forward_diff.get_forward_diffusion_params()
 
-    def build_model(self, text_seq_dim=256, text_embed_dim=256):
+    def build_model(self, text_seq_dim=256):
         self.build({
             'batch': (None, None, None, self.c_in),
             'time': (None, 1),
             'img_cond': (None, None, None, self.c_in),
             'class_cond': (None, 1),
-            'text_cond': (None, text_seq_dim, text_embed_dim)
+            'text_cond': (None, text_seq_dim)
         })
 
     def apply_conditioning(self, conditions):

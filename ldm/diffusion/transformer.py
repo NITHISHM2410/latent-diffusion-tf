@@ -24,7 +24,6 @@ class FeedForward(tf.keras.layers.Layer):
 
         :param c: number of input channels.
         :param multi: multiplier of input channels for hidden neurons.
-        :param dropout: dropout value.
         """
 
         super(FeedForward, self).__init__()
@@ -39,20 +38,18 @@ class FeedForward(tf.keras.layers.Layer):
 
 
 class CrossAttention(tf.keras.layers.Layer):
-    def __init__(self, c, heads=8, head_dim=64):
+    def __init__(self, c):
         """
         A Cross attention module for transformer
 
         :param c: number of input/output channels.
-        :param heads: number of attn heads.
-        :param head_dim: dimension of each head.
+
         """
         super(CrossAttention, self).__init__()
-        inner_dim = head_dim * heads
         self.attn = tf.keras.layers.Attention(use_scale=True)
-        self.k = tf.keras.layers.Dense(inner_dim, use_bias=False)
-        self.q = tf.keras.layers.Dense(inner_dim, use_bias=False)
-        self.v = tf.keras.layers.Dense(inner_dim, use_bias=False)
+        self.k = tf.keras.layers.Dense(c, use_bias=False)
+        self.q = tf.keras.layers.Dense(c, use_bias=False)
+        self.v = tf.keras.layers.Dense(c, use_bias=False)
         self.out = tf.keras.layers.Dense(c)
 
     def call(self, inputs, training=True, *args, **kwargs):
@@ -69,18 +66,17 @@ class CrossAttention(tf.keras.layers.Layer):
 
 
 class TransformerBlock(tf.keras.layers.Layer):
-    def __init__(self, c, heads, head_dim):
+    def __init__(self, c):
         """
         A Transformer block consisting of Feedforward and cross attn modules.
 
         :param c: number of input/output channels.
-        :param heads: number of attn heads.
-        :param head_dim: dim of each attn head.
+
         """
         super(TransformerBlock, self).__init__()
-        self.cross1 = CrossAttention(c=c, heads=heads, head_dim=head_dim)
+        self.cross1 = CrossAttention(c=c)
         self.ff = FeedForward(c)
-        self.cross2 = CrossAttention(c=c, heads=heads, head_dim=head_dim)
+        self.cross2 = CrossAttention(c=c)
 
         self.norm1 = tf.keras.layers.LayerNormalization()
         self.norm2 = tf.keras.layers.LayerNormalization()
@@ -96,21 +92,20 @@ class TransformerBlock(tf.keras.layers.Layer):
 
 
 class SpatialTransformer(tf.keras.layers.Layer):
-    def __init__(self, c, heads, head_dim, depth=1):
+    def __init__(self, c, inner_dim, depth):
         """
         A transformer module consisting of multiple transformer blocks.
 
         :param c: number of input/output channels.
-        :param heads: number of attn heads.
-        :param head_dim: dim of each attn head.
+        :param inner_dim: transformer embed dim.
         :param depth: depth of transformer.
         """
         super(SpatialTransformer, self).__init__()
-        self.inner_dim = heads * head_dim
+        self.inner_dim = inner_dim
         self.norm = tf.keras.layers.GroupNormalization(c)
         self.proj_in = tf.keras.layers.Conv2D(self.inner_dim, kernel_size=1, strides=1)
 
-        self.blocks = [TransformerBlock(self.inner_dim, heads, head_dim) for _ in range(depth)]
+        self.blocks = [TransformerBlock(self.inner_dim) for _ in range(depth)]
 
         self.out = tf.keras.layers.Conv2D(c, kernel_size=1, strides=1)
 
@@ -118,7 +113,7 @@ class SpatialTransformer(tf.keras.layers.Layer):
         x = inputs
         context = kwargs['context']
         x_in = x
-        ih, iw = tf.shape(x)[1], tf.shape(x)[3]
+        ih, iw = tf.shape(x)[1], tf.shape(x)[2]
         x = self.norm(x)
         x = self.proj_in(x)
         x = tf.reshape(x, (-1, ih * iw, self.inner_dim))

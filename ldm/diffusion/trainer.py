@@ -183,6 +183,7 @@ class Trainer:
             text_cond = data.get('text_cond', None)
             class_cond = data.get('class_cond', None)
             img_cond = data.get('img_cond', None)
+            BS = tf.shape(image)[0]
 
             # Conditional guidance
             if self.model.class_cond:
@@ -191,10 +192,10 @@ class Trainer:
 
             if self.model.text_cond:
                 if tf.random.uniform(minval=0, maxval=1, shape=()) < 0.1:
-                    text_cond = tf.fill(dims=tf.shape(text_cond), value=0.0)
+                    text_cond = tf.repeat(tf.constant([101, 102] + ([0]*(self.model.text_seq_len-2)))[None, :], BS, axis=0)
 
             # Sample time step
-            t = self.sample_time_step(size=tf.shape(image)[0])
+            t = self.sample_time_step(size=BS)
 
             # Forward Noise
             noised_image, noise = self.model.forward_diff(image=image, time=t)

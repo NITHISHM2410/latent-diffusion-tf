@@ -1,6 +1,7 @@
-# script to produce tf records for coco dataset
-# below script creates image caption pair for future LDM txt2img model, so there may be same images with multiple captions.
-# vq models are trained on coco dataset with duplicated images and captions dropped.
+# script to produce tf records for COCO dataset.
+# COCO dataset contains img-text pairs, so there maybe multiple same images (duplication) with diff caption.
+# For training VQ models drop captions and drop duplicate images
+# For training LDM txt2img models, we need to keep captions in TFR and can either drop or keep the duplicates.
 
 
 import tensorflow as tf
@@ -27,8 +28,8 @@ def serialize(img, context):
     return sample.SerializeToString()
 
 
-def create_records(dataset: pd.DataFrame, dataset_path, op_path, for_ae):
-    if for_ae:
+def create_records(dataset: pd.DataFrame, dataset_path, op_path, captions, drop_duplicates):
+    if drop_duplicates:
         dataset = dataset.drop_duplicates(subset=('image_id',))
     with (tf.io.TFRecordWriter(op_path,
                                options=tf.io.TFRecordOptions(compression_type='GZIP', compression_level=9)) as writer):
@@ -37,7 +38,7 @@ def create_records(dataset: pd.DataFrame, dataset_path, op_path, for_ae):
             img = tf.io.decode_jpeg(img, 3)
             img = tf.cast(tf.image.resize(img, (256, 256)), tf.uint8)
             img = tf.io.encode_jpeg(img).numpy()
-            if for_ae:
+            if captions:
                 context = context.encode('utf-8')
             else:
                 context = None
@@ -72,15 +73,18 @@ val_df = load_data(val_annot)
 
 ########################################################################################################################
 # MAKE CHANGES HERE
-# Change the 2nd, 3rd, 4th param.
+# Change the 2nd, 3rd, 4th ,5th param.
 # 2nd param is the path of folder containing images. 3rd param is the path to generate TFR with name.
-# 4th param: boolean. If True, TFR is created without captions, so all duplicates are dropped, only unique images are serialized.
-#                     If False, TFR is created with captions, so there may be multiple copies of same image because same image may be multiple captions.
+# 4th param - captions: boolean. If True, TFR is created without captions.
+#                                If False, TFR is created with captions.
 
-create_records(train_df, r"F:\Python Works\PyCharm Projects\LDM\coco-2017-dataset\coco2017\train2017", "TrainRecords", True)
-create_records(val_df, r"F:\Python Works\PyCharm Projects\LDM\coco-2017-dataset\coco2017\val2017", "ValRecords", True)
+# 5th param - drop_duplicates : boolean. If True, TFR is created with duplicates are dropped, only unique images are serialized.
+#                                        If False, TFR is created with duplicates. Set 'False' only when generating TFR with captions.
+
+create_records(train_df, r"F:\Python Works\PyCharm Projects\LDM\coco-2017-dataset\coco2017\train2017", "TrainRecords", True, True)
+create_records(val_df, r"F:\Python Works\PyCharm Projects\LDM\coco-2017-dataset\coco2017\val2017", "ValRecords", True, True)
 
 ########################################################################################################################
 
-
+ 
 # Parsing code is available in Demo Notebook.
