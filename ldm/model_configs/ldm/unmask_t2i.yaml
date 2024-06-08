@@ -1,5 +1,5 @@
 model_dir: diffusion.models
-model_name: TextCondUNet
+model_name: UnmaskTextCondUNet
 params:
   build: true
   base:
@@ -25,12 +25,20 @@ params:
     beta_start: 0.00085
     beta_end: 0.012
     cond_weight: 3
-    img_cond: false
+    img_cond: true
     text_cond: true
     class_cond: false
 
-
   model_path: "/kaggle/input/bert/tensorflow2/bert-en-uncased-l-10-h-128-a-2/2"
+  low_x_res: 4
+  min_max_mask_box:
+    - 60
+    - 60
+    - 90
+    - 90
+  mask_edge_percent:
+    - 0.10
+    - 0.12
 
 
 

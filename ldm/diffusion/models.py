@@ -10,11 +10,12 @@ class UnCondUNet(DiffusionUNet):
 
         """
         super(UnCondUNet, self).__init__(**kwargs['base'])
-        self.build_model()
+
+        if kwargs['build']:
+            self.build_model()
 
     def apply_conditioning(self, conditions):
-        conditions['img_org'] = conditions['img_cond'] = conditions['text_cond'] = conditions['class_cond'] = \
-        conditions['cond_weight'] = None
+        conditions['img_org'] = conditions['img_cond'] = conditions['text_cond'] = conditions['class_cond'] = conditions['cond_weight'] = None
         return conditions
 
 
@@ -35,7 +36,8 @@ class ClassCondUNet(DiffusionUNet):
         self.cls_encoding = tf.keras.layers.Embedding(self.num_classes + 1, self.ch_list[0] * 4)
         self.flatten = tf.keras.layers.Reshape(target_shape=())
 
-        self.build_model()
+        if kwargs['build']:
+            self.build_model()
 
     def encode_inputs(self, inputs):
         inputs = super().encode_inputs(inputs.copy())
@@ -46,8 +48,7 @@ class ClassCondUNet(DiffusionUNet):
 
     def apply_conditioning(self, conditions):
         conditions['img_org'] = conditions['img_cond'] = conditions['text_cond'] = None
-        assert 'class_cond' in conditions and conditions[
-            'class_cond'] is not None, "Provide class_cond for class conditioning model."
+        assert 'class_cond' in conditions and conditions['class_cond'] is not None, "Provide class_cond for class conditioning model."
         conditions['cond_weight'] = tf.constant(conditions.get('cond_weight', self.cond_weight), dtype=tf.float32)
         return conditions
 
@@ -82,7 +83,14 @@ class UnMaskUNet(DiffusionUNet):
         self.min_max_mask_box = min_max_mask_box
         self.low_x_res = low_x_res
 
-        self.build_model()
+        self.mask_embedding = tf.keras.Sequential([
+            tf.keras.layers.SeparableConv2D(self.ch_list[0] * 4, kernel_size=1),
+            tf.keras.layers.Activation("swish"),
+            tf.keras.layers.SeparableConv2D(self.ch_list[0] * 4, kernel_size=1)
+        ])
+
+        if kwargs['build']:
+            self.build_model()
 
     @tf.function
     def mask_out(self, image, edge_mask_percent=None, mask_boxes=None):
@@ -105,11 +113,9 @@ class UnMaskUNet(DiffusionUNet):
 
         if mask_boxes is None:
             mh = tf.random.uniform((B, 1, 1, 1), 0, H - minn_h_box, tf.int32)
-            mhx = tf.clip_by_value(tf.random.uniform((B, 1, 1, 1), tf.reduce_min(mh), H, tf.int32), mh + minn_h_box,
-                                   mh + maxx_h_box)
+            mhx = tf.clip_by_value(tf.random.uniform((B, 1, 1, 1), tf.reduce_min(mh), H, tf.int32), mh + minn_h_box, mh + maxx_h_box)
             mw = tf.random.uniform((B, 1, 1, 1), 0, W - minn_w_box, tf.int32)
-            mwx = tf.clip_by_value(tf.random.uniform((B, 1, 1, 1), tf.reduce_min(mw), W, tf.int32), mw + minn_w_box,
-                                   mw + maxx_w_box)
+            mwx = tf.clip_by_value(tf.random.uniform((B, 1, 1, 1), tf.reduce_min(mw), W, tf.int32), mw + minn_w_box, mw + maxx_w_box)
         else:
             mh, mw, mhx, mwx = tf.split(mask_boxes, 4, 1)
             mh, mw, mhx, mwx = mh[:, :, None, None], mw[:, :, None, None], mhx[:, :, None, None], mwx[:, :, None, None]
@@ -122,8 +128,7 @@ class UnMaskUNet(DiffusionUNet):
 
     def apply_conditioning(self, conditions):
         conditions['text_cond'] = conditions['class_cond'] = conditions['cond_weight'] = None
-        assert 'img_cond' in conditions and conditions[
-            'img_cond'] is not None, "Provide img_cond for class conditioning model."
+        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for class conditioning model."
 
         if isinstance(conditions['img_cond'], dict):
             conditions['img_org'] = conditions['img_cond']['image']
@@ -133,6 +138,11 @@ class UnMaskUNet(DiffusionUNet):
             conditions['img_cond'] = self.mask_out(conditions['img_cond'])
 
         return conditions
+
+    def encode_inputs(self, inputs):
+        inputs = super().encode_inputs(inputs.copy())
+        inputs['img_cond'] = self.mask_embedding(inputs['img_cond'])
+        return inputs
 
 
 class TextCondUNet(DiffusionUNet):
@@ -148,28 +158,116 @@ class TextCondUNet(DiffusionUNet):
                 'cond_weight': interpolation weight from uncond to cond sampling.
         """
         super(TextCondUNet, self).__init__(**kwargs['base'])
-        self.text_seq_len = 128
 
+        self.text_seq_len = 128
         self.bert_encoder = hub.KerasLayer(model_path)
         self.bert_encoder.trainable = False
 
-        self.build_model(text_seq_dim=self.text_seq_len)
+        if kwargs['build']:
+            self.build_model(text_seq_dim=self.text_seq_len)
 
     def encode_inputs(self, inputs):
         inputs = super().encode_inputs(inputs.copy())
         tokens = tf.cast(inputs['text_cond'], tf.int32)
 
         inputs['text_cond'] = {
-            'input_mask': tf.cast(tf.cast(tokens, tf.bool), tf.int32),
-            'input_type_ids': tf.zeros_like(tokens),
-            'input_word_ids': tokens
+            'input_mask': tf.cast(tf.cast(tokens, tf.bool), tf.int32), 'input_type_ids': tf.zeros_like(tokens), 'input_word_ids': tokens
         }
         inputs['text_cond'] = self.bert_encoder(inputs['text_cond'])['sequence_output']
         return inputs
 
     def apply_conditioning(self, conditions):
         conditions['img_org'] = conditions['img_cond'] = conditions['class_cond'] = None
-        assert 'text_cond' in conditions and conditions[
-            'text_cond'] is not None, "Provide text_cond for text conditioning model."
+        assert 'text_cond' in conditions and conditions['text_cond'] is not None, "Provide text_cond for text conditioning model."
         conditions['cond_weight'] = tf.constant(conditions.get('cond_weight', self.cond_weight), dtype=tf.float32)
         return conditions
+
+
+class UnmaskClassCondUNet(UnMaskUNet):
+    def __init__(self, num_classes, **kwargs):
+        """
+
+        :param num_classes: number of classes.
+
+        conditional input format:
+            Dict with both 'img_cond' & 'class_cond' keys. Check the above models docstring for their format.
+
+        """
+        build = kwargs['build'];
+        kwargs['build'] = False
+        super(UnmaskClassCondUNet, self).__init__(**kwargs)
+
+        self.num_classes = num_classes
+        self.cls_encoding = tf.keras.layers.Embedding(self.num_classes + 1, self.ch_list[0] * 4)
+        self.flatten = tf.keras.layers.Reshape(target_shape=())
+
+        if build:
+            self.build_model()
+
+    def apply_conditioning(self, conditions):
+        conditions['text_cond'] = None
+        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for class conditioning model."
+        assert 'class_cond' in conditions and conditions['class_cond'] is not None, "Provide class_cond for class conditioning model."
+
+        if isinstance(conditions['img_cond'], dict):
+            conditions['img_org'] = conditions['img_cond']['image']
+            conditions['img_cond'] = self.mask_out(**conditions['img_cond'])
+        else:
+            conditions['img_org'] = conditions['img_cond']
+            conditions['img_cond'] = self.mask_out(conditions['img_cond'])
+
+        conditions['cond_weight'] = tf.constant(conditions.get('cond_weight', self.cond_weight), dtype=tf.float32)
+        return conditions
+
+    def encode_inputs(self, inputs):
+        inputs = super().encode_inputs(inputs.copy())
+        inputs['class_cond'] = self.cls_encoding(self.flatten(inputs['class_cond']))
+        inputs['time'] += inputs['class_cond']
+        del inputs['class_cond']
+        return inputs
+
+
+class UnmaskTextCondUNet(UnMaskUNet):
+    def __init__(self, model_path, **kwargs):
+        """
+
+        :param model_path: path of pretrained text encoder model.
+
+        conditional input format:
+            Dict with both 'img_cond' & 'text_cond' keys. Check the above models docstring for their format.
+
+        """
+        build = kwargs['build']; kwargs['build'] = False
+        super(UnmaskTextCondUNet, self).__init__(**kwargs)
+
+        self.text_seq_len = 128
+        self.bert_encoder = hub.KerasLayer(model_path)
+        self.bert_encoder.trainable = False
+
+        if build:
+            self.build_model(text_seq_dim=self.text_seq_len)
+
+    def apply_conditioning(self, conditions):
+        conditions['class_cond'] = None
+        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for class conditioning model."
+        assert 'text_cond' in conditions and conditions['text_cond'] is not None, "Provide text_cond for class conditioning model."
+
+        if isinstance(conditions['img_cond'], dict):
+            conditions['img_org'] = conditions['img_cond']['image']
+            conditions['img_cond'] = self.mask_out(**conditions['img_cond'])
+        else:
+            conditions['img_org'] = conditions['img_cond']
+            conditions['img_cond'] = self.mask_out(conditions['img_cond'])
+
+        conditions['cond_weight'] = tf.constant(conditions.get('cond_weight', self.cond_weight), dtype=tf.float32)
+        return conditions
+
+    def encode_inputs(self, inputs):
+        inputs = super().encode_inputs(inputs.copy())
+        tokens = tf.cast(inputs['text_cond'], tf.int32)
+
+        inputs['text_cond'] = {
+            'input_mask': tf.cast(tf.cast(tokens, tf.bool), tf.int32), 'input_type_ids': tf.zeros_like(tokens), 'input_word_ids': tokens
+        }
+        inputs['text_cond'] = self.bert_encoder(inputs['text_cond'])['sequence_output']
+        return inputs

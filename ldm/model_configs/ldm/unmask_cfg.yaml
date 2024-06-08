@@ -1,20 +1,21 @@
 model_dir: diffusion.models
-model_name: ClassCondUNet
+model_name: UnmaskClassCondUNet
 params:
   build: true
   base:
     c_in: 3
     c_out: 3
     ch_list:
-    - 224
-    - 448
-    - 672
-    - 896
+      - 224
+      - 448
+      - 672
+      - 896
     norm_g: 32
     attn_res:
-    - 32
-    - 16
-    - 8
+      - 32
+      - 16
+      - 8
+
     sp_attn_depth: 1
     trans_dim: 224
     resamp_with_conv: true
@@ -25,11 +26,20 @@ params:
     beta_start: 0.0015
     beta_end: 0.0195
     cond_weight: 3
-    img_cond: false
+    img_cond: true
     text_cond: false
     class_cond: true
 
   num_classes: 16
+  low_x_res: 4
+  min_max_mask_box:
+    - 60
+    - 60
+    - 90
+    - 90
+  mask_edge_percent:
+    - 0.10
+    - 0.12
 
 
 

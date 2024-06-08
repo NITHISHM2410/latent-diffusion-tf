@@ -48,11 +48,14 @@ The forward noising and gradual denoising happens in latent space of images whic
 <br><br>
 <img src='results\t2i_disp.png'>
 
+*Moderate quality images are produced by the current text-to-img model training, 
+and additional training or a more sophisticated model architecture may enhance the quality.*
+
 ## Target
 * [x]  Unconditional modelling. <br>
 * [x] Class conditioning modelling. <br>
 * [x] Text conditioning modelling. <br>
-* [ ] Generative fill applications using DM. Will be uploaded [here](https://github.com/NITHISHM2410/diffusion-model-tf-generativefill) <br>
+* [x] Generative fill applications using DM. Result are uploaded [here](https://github.com/NITHISHM2410/diffusion-model-tf-generativefill) <br>
 
 
 

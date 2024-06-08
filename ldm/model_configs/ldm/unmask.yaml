@@ -1,6 +1,7 @@
 model_dir: diffusion.models
 model_name: UnMaskUNet
 params:
+  build: true
   base:
     c_in: 3
     c_out: 3

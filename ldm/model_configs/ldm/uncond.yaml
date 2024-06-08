@@ -1,6 +1,7 @@
 model_dir: diffusion.models
 model_name: UnCondUNet
 params:
+  build: true
   base:
     c_in: 3
     c_out: 3
