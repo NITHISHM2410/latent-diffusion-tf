@@ -60,14 +60,14 @@ class UnMaskUNet(DiffusionUNet):
         :param low_x_res: x, where the image is down sampled x times post applying conditions and fed to the nn.
         if input img size is 256 and this param is 4 and then img size to nn is 64.
         :param mask_edge_percent: percentage of masking to be done from all sides of the image as a range (min, max).
-        :param min_max_mask_box: min height, min width , max height, max width aof the mask box as list.
+        :param min_max_mask_box: min height, min width , max height, max width of the mask box as list.
 
         Conditional input 'img_cond' must be in the below format:
 
             Dict:
                 'image': image to be masked.
-                'mask_edge_percent': tensor of shape (4, ) each denotes the mask percent from each edge. (Top, Down, Left, Right)
-                'min_max_mask_box' : tensor of shape (4, ) which denotes the mask box location. format: (x, y, x+h, y+w).
+                'mask_edge_percent': tensor of shape (BS, 4) each denotes the mask percent from each edge. (Top, Down, Left, Right)
+                'min_max_mask_box' : tensor of shape (BS, 4) which denotes the mask box location. format: (x, y, x+h, y+w).
 
             or
 
@@ -128,7 +128,7 @@ class UnMaskUNet(DiffusionUNet):
 
     def apply_conditioning(self, conditions):
         conditions['text_cond'] = conditions['class_cond'] = conditions['cond_weight'] = None
-        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for class conditioning model."
+        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for image conditioning model."
 
         if isinstance(conditions['img_cond'], dict):
             conditions['img_org'] = conditions['img_cond']['image']
@@ -206,7 +206,7 @@ class UnmaskClassCondUNet(UnMaskUNet):
 
     def apply_conditioning(self, conditions):
         conditions['text_cond'] = None
-        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for class conditioning model."
+        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for image conditioning model."
         assert 'class_cond' in conditions and conditions['class_cond'] is not None, "Provide class_cond for class conditioning model."
 
         if isinstance(conditions['img_cond'], dict):
@@ -249,8 +249,8 @@ class UnmaskTextCondUNet(UnMaskUNet):
 
     def apply_conditioning(self, conditions):
         conditions['class_cond'] = None
-        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for class conditioning model."
-        assert 'text_cond' in conditions and conditions['text_cond'] is not None, "Provide text_cond for class conditioning model."
+        assert 'img_cond' in conditions and conditions['img_cond'] is not None, "Provide img_cond for image conditioning model."
+        assert 'text_cond' in conditions and conditions['text_cond'] is not None, "Provide text_cond for text conditioning model."
 
         if isinstance(conditions['img_cond'], dict):
             conditions['img_org'] = conditions['img_cond']['image']
