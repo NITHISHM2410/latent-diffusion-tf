@@ -62,7 +62,7 @@ and additional training or a more sophisticated model architecture may enhance t
 
 ## Demo
 
-**Demo Notebook will be uploaded in [my Kaggle account](https://www.kaggle.com/nithishm2410) code section.**
+**Demo Notebook is uploaded in [my Kaggle account](https://www.kaggle.com/nithishm2410) code section.**
 <br>
 
 ### Code Snippets
@@ -106,6 +106,10 @@ from ldm.diffusion.generate import GenerateImages
 generator = GenerateImages(...) # check params in docstring.
 generator.sample() # check params in docstring.
 ```
+
+## Weights
+- All LDM weights & VQ weights along with optimizer states can be found at 'Input' section of the Kaggle demo notebook.
+- VQ model weights can also be found [here](https://drive.google.com/drive/folders/1jYH7YGGGu-T_2f3OE_437KVKbpzZc4-o?usp=sharing)
 
 ## Acknowledgement
 - [Official LDM in PyTorch](https://github.com/CompVis/latent-diffusion)
