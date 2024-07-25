@@ -1,6 +1,7 @@
 # Latent Diffusion Model - TensorFlow
 
-**This work implements unofficial TF2 version of LDM based on the [official PyTorch version](https://github.com/CompVis/latent-diffusion).**
+**This work implements unofficial TF2 version of LDM based on the [official PyTorch version](https://github.com/CompVis/latent-diffusion).**<br>
+**Compatibility: 2.13.0 <= TensorFlow <= 2.14.0**
 
 <img src='results/lhq_uncond5.png'>
 
